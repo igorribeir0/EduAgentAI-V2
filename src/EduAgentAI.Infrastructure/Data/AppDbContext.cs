@@ -1,9 +1,13 @@
 
+using EduAgentAI.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace EduAgentAI.Infrastructure.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext
+    : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
 {
     public AppDbContext(
         DbContextOptions<AppDbContext> options)
@@ -11,16 +15,29 @@ public class AppDbContext : DbContext
     {
     }
 
+    // =====================================================
+    // TABELAS EXISTENTES
+    // =====================================================
+
     public DbSet<ConversationRecord> Conversations =>
         Set<ConversationRecord>();
 
     public DbSet<MessageRecord> Messages =>
         Set<MessageRecord>();
 
+    // =====================================================
+    // CONFIGURAÇÕES DO BANCO
+    // =====================================================
+
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
     {
+        // Obrigatório para configurar as tabelas do Identity
         base.OnModelCreating(modelBuilder);
+
+        // =================================================
+        // CONVERSATIONS
+        // =================================================
 
         modelBuilder.Entity<ConversationRecord>(entity =>
         {
@@ -41,6 +58,10 @@ public class AppDbContext : DbContext
                 .HasForeignKey(m => m.ConversationId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        // =================================================
+        // MESSAGES
+        // =================================================
 
         modelBuilder.Entity<MessageRecord>(entity =>
         {
