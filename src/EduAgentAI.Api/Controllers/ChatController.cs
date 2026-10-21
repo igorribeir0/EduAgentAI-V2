@@ -1,3 +1,4 @@
+
 using EduAgentAI.Application.DTOs;
 using EduAgentAI.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -19,17 +20,30 @@ public class ChatController : ControllerBase
     public async Task<ActionResult<ChatResponse>> SendMessage(
         [FromBody] ChatRequest request)
     {
-        if (request.StudentId == Guid.Empty ||
-            string.IsNullOrWhiteSpace(request.Message))
+        if (request is null ||
+            request.StudentId == Guid.Empty ||
+            string.IsNullOrWhiteSpace(request.Message) ||
+            request.Message.Length > 4000)
         {
             return BadRequest(new
             {
-                error = "StudentId e Message são obrigatórios."
+                error = "Aluno e mensagem válidos são obrigatórios (máximo de 4000 caracteres)."
             });
         }
 
-        var response = await _chatService.SendMessageAsync(request);
+        try
+        {
+            var response = await _chatService
+                .SendMessageAsync(request);
 
-        return Ok(response);
+            return Ok(response);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                error = ex.Message
+            });
+        }
     }
 }

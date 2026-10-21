@@ -1,26 +1,81 @@
-using EduAgentAI.Application.DTOs;
+Ôªøusing EduAgentAI.Application.DTOs;
 using EduAgentAI.Application.Interfaces;
+using EduAgentAI.Domain.Enums;
 
 namespace EduAgentAI.Application.Services;
 
 public class ChatService : IChatService
 {
-    public Task<ChatResponse> SendMessageAsync(ChatRequest request)
+    private readonly IAIService _aiService;
+    private readonly IConversationRepository _repository;
+
+    public ChatService(
+        IAIService aiService,
+        IConversationRepository repository)
+    {
+        _aiService = aiService;
+        _repository = repository;
+    }
+
+    public async Task<ChatResponse> SendMessageAsync(
+        ChatRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         if (request.StudentId == Guid.Empty)
-            throw new ArgumentException("Aluno inv·lido.");
+            throw new ArgumentException("Aluno inv√°lido.");
 
         if (string.IsNullOrWhiteSpace(request.Message))
-            throw new ArgumentException("A mensagem È obrigatÛria.");
+            throw new ArgumentException(
+                "Mensagem obrigat√≥ria.");
 
-        var response = new ChatResponse
+        var message = request.Message.Trim();
+
+        if (message.Length > 4000)
+            throw new ArgumentException(
+                "Mensagem excede 4000 caracteres.");
+
+        Guid conversationId;
+
+        if (request.ConversationId.HasValue)
         {
-            ConversationId = Guid.NewGuid(),
-            Answer = "Ol·! Sou o EduAgent AI. Em breve poderei consultar suas aulas e hor·rios."
-        };
+            conversationId = request.ConversationId.Value;
 
-        return Task.FromResult(response);
+            var allowed = await _repository
+                .BelongsToStudentAsync(
+                    conversationId,
+                    request.StudentId);
+
+            if (!allowed)
+                throw new ArgumentException(
+                    "Conversa inv√°lida ou n√£o pertence ao aluno.");
+        }
+        else
+        {
+            conversationId = await _repository
+                .CreateAsync(request.StudentId);
+        }
+
+        var history = await _repository
+            .GetMessagesAsync(conversationId);
+
+        var answer = await _aiService
+            .GenerateResponseAsync(history, message);
+
+        await _repository.AddMessageAsync(
+            conversationId,
+            MessageRole.Student,
+            message);
+
+        await _repository.AddMessageAsync(
+            conversationId,
+            MessageRole.Assistant,
+            answer);
+
+        return new ChatResponse
+        {
+            ConversationId = conversationId,
+            Answer = answer
+        };
     }
 }
