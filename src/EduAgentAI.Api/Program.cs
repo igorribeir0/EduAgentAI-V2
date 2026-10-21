@@ -1,33 +1,35 @@
 
 using EduAgentAI.Application.Interfaces;
 using EduAgentAI.Application.Services;
+using EduAgentAI.Infrastructure.AI;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Controllers
 builder.Services.AddControllers();
 
-// OpenAPI
+// Documentação OpenAPI
 builder.Services.AddOpenApi();
 
-// Injeção de dependência
+// Serviço de chat
 builder.Services.AddScoped<IChatService, ChatService>();
+
+// Integração com Google Gemini
+builder.Services.AddHttpClient<IAIService, GeminiAIService>(
+    client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(60);
+    });
 
 var app = builder.Build();
 
-// OpenAPI em desenvolvimento
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-// Habilitar HTTPS quando configurarmos
-// o certificado e a hospedagem.
-
-// Autorização
 app.UseAuthorization();
 
-// Mapear endpoints
 app.MapControllers();
 
 app.Run();
