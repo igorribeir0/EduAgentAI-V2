@@ -1,4 +1,5 @@
-﻿using EduAgentAI.Application.DTOs;
+
+using EduAgentAI.Application.DTOs;
 using EduAgentAI.Domain.Enums;
 
 namespace EduAgentAI.Application.Interfaces;
@@ -22,5 +23,9 @@ public interface IConversationRepository
         Guid conversationId,
         MessageRole role,
         string content,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ConversationSummaryDto>> GetConversationsAsync(
+        Guid studentId,
         CancellationToken cancellationToken = default);
 }

@@ -93,4 +93,47 @@ public class ConversationRepository : IConversationRepository
 
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    
+public async Task<IReadOnlyList<ConversationSummaryDto>> GetConversationsAsync(
+    Guid studentId,
+    CancellationToken cancellationToken = default)
+{
+    if (studentId == Guid.Empty)
+        throw new ArgumentException("Aluno inválido.");
+
+    var conversations = await _context.Conversations
+        .AsNoTracking()
+        .Where(c => c.StudentId == studentId && !c.IsClosed)
+        .OrderByDescending(c => c.CreatedAt)
+        .Select(c => new
+        {
+            c.Id,
+            c.CreatedAt,
+            FirstMessage = _context.Messages
+                .Where(m =>
+                    m.ConversationId == c.Id &&
+                    m.Role == MessageRole.Student)
+                .OrderBy(m => m.CreatedAt)
+                .ThenBy(m => m.Id)
+                .Select(m => m.Content)
+                .FirstOrDefault()
+        })
+        .Take(50)
+        .ToListAsync(cancellationToken);
+
+    return conversations
+        .Select(c => new ConversationSummaryDto
+        {
+            Id = c.Id,
+            CreatedAt = c.CreatedAt,
+            Title = string.IsNullOrWhiteSpace(c.FirstMessage)
+                ? "Nova conversa"
+                : c.FirstMessage.Length > 60
+                    ? c.FirstMessage[..60] + "..."
+                    : c.FirstMessage
+        })
+        .ToList();
+}
+
 }

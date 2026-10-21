@@ -1,4 +1,4 @@
-﻿namespace EduAgentAI.Infrastructure.Data;
+namespace EduAgentAI.Infrastructure.Data;
 
 public class ConversationRecord
 {

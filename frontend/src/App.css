@@ -19,7 +19,7 @@
   padding: 28px 20px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
 }
 
 .brand {
@@ -162,14 +162,12 @@
   padding: 16px 20px;
   border-radius: 16px;
   max-width: 85%;
-  box-shadow: 0 2px 8px #1c2d4910;
 }
 
 .message.student {
   align-self: flex-end;
   background: #507bf2;
   color: white;
-  border-bottom-right-radius: 4px;
 }
 
 .message.assistant {
@@ -177,7 +175,6 @@
   background: white;
   color: #25324a;
   border: 1px solid #e8edf6;
-  border-bottom-left-radius: 4px;
 }
 
 .message-label {
@@ -221,10 +218,6 @@
   outline: none;
 }
 
-.composer input:focus {
-  border-color: #507bf2;
-}
-
 .composer button {
   border: none;
   border-radius: 12px;
@@ -253,6 +246,67 @@
   color: #b42318;
 }
 
+/* Histórico de conversas */
+
+.conversation-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.conversation-section h3 {
+  margin: 0;
+  padding: 0 8px;
+  font-size: 12px;
+  color: #a8b7d0;
+  text-transform: uppercase;
+}
+
+.conversation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-y: auto;
+}
+
+.conversation-item {
+  background: transparent;
+  color: #d5dfed;
+  text-align: left;
+  border: none;
+  border-radius: 9px;
+  padding: 12px;
+  font-size: 13px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.conversation-item:hover {
+  background: #253651;
+}
+
+.conversation-item.active {
+  background: #344c73;
+  color: white;
+  font-weight: 600;
+}
+
+.conversation-item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.empty-history {
+  color: #8596b0;
+  font-size: 12px;
+  padding: 0 8px;
+}
+
 @media (max-width: 700px) {
   .sidebar {
     width: 75px;
@@ -260,7 +314,8 @@
   }
 
   .brand > div:last-child,
-  .sidebar-bottom {
+  .sidebar-bottom,
+  .conversation-section {
     display: none;
   }
 
@@ -273,20 +328,8 @@
     padding: 18px;
   }
 
-  .header h1 {
-    font-size: 16px;
-  }
-
-  .ai-tag {
-    display: none;
-  }
-
   .chat-area {
     padding: 16px;
-  }
-
-  .message {
-    max-width: 95%;
   }
 
   .composer {

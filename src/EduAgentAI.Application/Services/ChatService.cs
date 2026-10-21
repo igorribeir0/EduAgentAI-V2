@@ -1,4 +1,5 @@
-﻿using EduAgentAI.Application.DTOs;
+
+using EduAgentAI.Application.DTOs;
 using EduAgentAI.Application.Interfaces;
 using EduAgentAI.Domain.Enums;
 
@@ -27,13 +28,11 @@ public class ChatService : IChatService
 
         if (string.IsNullOrWhiteSpace(request.Message))
             throw new ArgumentException(
-                "Mensagem obrigatória.");
+                "A mensagem é obrigatória.");
 
-        var message = request.Message.Trim();
-
-        if (message.Length > 4000)
+        if (request.Message.Length > 4000)
             throw new ArgumentException(
-                "Mensagem excede 4000 caracteres.");
+                "A mensagem excede 4000 caracteres.");
 
         Guid conversationId;
 
@@ -48,7 +47,7 @@ public class ChatService : IChatService
 
             if (!allowed)
                 throw new ArgumentException(
-                    "Conversa inválida ou não pertence ao aluno.");
+                    "Conversa inexistente, encerrada ou não pertence ao aluno.");
         }
         else
         {
@@ -56,17 +55,23 @@ public class ChatService : IChatService
                 .CreateAsync(request.StudentId);
         }
 
+        // Recupera histórico anterior
         var history = await _repository
             .GetMessagesAsync(conversationId);
 
+        // Envia histórico + pergunta atual ao Gemini
         var answer = await _aiService
-            .GenerateResponseAsync(history, message);
+            .GenerateResponseAsync(
+                history,
+                request.Message.Trim());
 
+        // Salva a mensagem do aluno
         await _repository.AddMessageAsync(
             conversationId,
             MessageRole.Student,
-            message);
+            request.Message);
 
+        // Salva a resposta da IA
         await _repository.AddMessageAsync(
             conversationId,
             MessageRole.Assistant,
