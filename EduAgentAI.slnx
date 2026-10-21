@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EduAgentAI.Api/EduAgentAI.Api.csproj" />
+    <Project Path="src/EduAgentAI.Application/EduAgentAI.Application.csproj" />
+    <Project Path="src/EduAgentAI.Domain/EduAgentAI.Domain.csproj" />
+    <Project Path="src/EduAgentAI.Infrastructure/EduAgentAI.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/EduAgentAI.Application.Tests/EduAgentAI.Application.Tests.csproj" />
+    <Project Path="tests/EduAgentAI.Domain.Tests/EduAgentAI.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

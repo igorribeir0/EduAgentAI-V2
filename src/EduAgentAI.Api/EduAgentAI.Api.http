@@ -1,0 +1,6 @@
+@EduAgentAI.Api_HostAddress = http://localhost:5186
+
+GET {{EduAgentAI.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
