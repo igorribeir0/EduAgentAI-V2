@@ -1,0 +1,24 @@
+
+:root {
+  font-family: Inter, system-ui, Arial, sans-serif;
+  color: #25324a;
+  background: #f7f9fc;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
