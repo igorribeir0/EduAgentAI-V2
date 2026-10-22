@@ -1,6 +1,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
+import AuthPage from './components/AuthPage'
+import type { AuthSession } from './components/AuthPage'
 import './App.css'
 
 type ChatMessage = {
@@ -26,23 +28,13 @@ type ChatResponse = {
   answer: string
 }
 
-const STUDENT_KEY = 'eduagent-student-id'
-
-function getStudentId(): string {
-  let id = sessionStorage.getItem(STUDENT_KEY)
-
-  if (!id) {
-    id = crypto.randomUUID()
-    sessionStorage.setItem(STUDENT_KEY, id)
-  }
-
-  return id
-}
-
 function App() {
-  const [studentId] = useState(getStudentId)
+  // JWT mantido apenas em memória
+  const [session, setSession] = useState<AuthSession | null>(null)
+
   const [conversationId, setConversationId] = useState<string | null>(null)
-  const [conversations, setConversations] = useState<ConversationSummary[]>([])
+  const [conversations, setConversations] =
+    useState<ConversationSummary[]>([])
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -57,32 +49,94 @@ function App() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  async function loadConversations() {
-    try {
-      const response = await fetch(
-        `/api/conversations?studentId=${encodeURIComponent(studentId)}`
-      )
+  function handleLogout() {
+    if (busyRef.current) return
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
-      }
-
-      const data: ConversationSummary[] = await response.json()
-      setConversations(data)
-    } catch (err) {
-      console.error('Erro ao carregar conversas:', err)
-      setError('Não foi possível carregar o histórico de conversas.')
-    }
+    requestRef.current++
+    setSession(null)
+    setConversationId(null)
+    setConversations([])
+    setMessages([])
+    setMessage('')
+    setError('')
+    setHistoryLoading(false)
   }
 
+  function handleAuthenticated(auth: AuthSession) {
+    requestRef.current++
+    setSession(auth)
+    setConversationId(null)
+    setConversations([])
+    setMessages([])
+    setMessage('')
+    setError('')
+  }
+
+  // Carrega o histórico sempre que o aluno faz login
   useEffect(() => {
-    void loadConversations()
-    // Carrega o histórico ao iniciar a aplicação
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studentId])
+    if (!session) return
+
+    const controller = new AbortController()
+
+    async function loadHistory() {
+      try {
+        const response = await fetch('/api/conversations', {
+          headers: {
+            Authorization: `Bearer ${session!.token}`,
+          },
+          signal: controller.signal,
+        })
+
+        if (response.status === 401) {
+          setSession(null)
+          setError('')
+          return
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+
+        const data: ConversationSummary[] = await response.json()
+
+        if (!controller.signal.aborted) {
+          setConversations(data)
+        }
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          console.error(err)
+          setError('Não foi possível carregar o histórico.')
+        }
+      }
+    }
+
+    void loadHistory()
+
+    return () => controller.abort()
+  }, [session])
+
+  async function refreshConversations(token: string) {
+    const response = await fetch('/api/conversations', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    if (response.status === 401) {
+      setSession(null)
+      return
+    }
+
+    if (!response.ok) {
+      throw new Error(`Erro ao carregar histórico: ${response.status}`)
+    }
+
+    const data: ConversationSummary[] = await response.json()
+    setConversations(data)
+  }
 
   async function openConversation(id: string) {
-    if (busyRef.current || historyLoading) return
+    if (!session || busyRef.current || historyLoading) return
 
     const request = ++requestRef.current
 
@@ -91,8 +145,18 @@ function App() {
 
     try {
       const response = await fetch(
-        `/api/conversations/${encodeURIComponent(id)}/messages?studentId=${encodeURIComponent(studentId)}`
+        `/api/conversations/${encodeURIComponent(id)}/messages`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.token}`,
+          },
+        }
       )
+
+      if (response.status === 401) {
+        setSession(null)
+        return
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`)
@@ -103,6 +167,7 @@ function App() {
       if (request !== requestRef.current) return
 
       setConversationId(id)
+
       setMessages(
         data
           .filter(item => item.role === 1 || item.role === 2)
@@ -114,8 +179,8 @@ function App() {
       )
     } catch (err) {
       if (request === requestRef.current) {
-        setError('Não foi possível abrir essa conversa.')
         console.error(err)
+        setError('Não foi possível abrir essa conversa.')
       }
     } finally {
       if (request === requestRef.current) {
@@ -127,9 +192,11 @@ function App() {
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
+    if (!session || busyRef.current || historyLoading) return
+
     const text = message.trim()
 
-    if (!text || busyRef.current || historyLoading) return
+    if (!text || text.length > 4000) return
 
     busyRef.current = true
     setLoading(true)
@@ -140,13 +207,18 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.token}`,
         },
         body: JSON.stringify({
-          studentId,
           conversationId,
           message: text,
         }),
       })
+
+      if (response.status === 401) {
+        setSession(null)
+        return
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`)
@@ -171,10 +243,17 @@ function App() {
       setConversationId(data.conversationId)
       setMessage('')
 
-      await loadConversations()
+      try {
+        await refreshConversations(session.token)
+      } catch (historyError) {
+        console.error('Erro ao atualizar histórico:', historyError)
+        setError(
+          'Mensagem enviada, mas não foi possível atualizar o histórico.'
+        )
+      }
     } catch (err) {
-      setError('Não foi possível enviar sua mensagem.')
       console.error(err)
+      setError('Não foi possível enviar sua mensagem.')
     } finally {
       busyRef.current = false
       setLoading(false)
@@ -190,6 +269,11 @@ function App() {
     setMessages([])
     setMessage('')
     setError('')
+  }
+
+  // Sem JWT, o usuário deve fazer login
+  if (!session) {
+    return <AuthPage onAuthenticated={handleAuthenticated} />
   }
 
   return (
@@ -215,7 +299,9 @@ function App() {
           <h3>Histórico</h3>
 
           {conversations.length === 0 ? (
-            <p className="empty-history">Nenhuma conversa ainda.</p>
+            <p className="empty-history">
+              Nenhuma conversa ainda.
+            </p>
           ) : (
             <div className="conversation-list">
               {conversations.map(item => (
@@ -235,6 +321,25 @@ function App() {
           )}
         </div>
 
+        <div className="sidebar-user">
+          <div className="user-avatar">
+            {session.fullName.charAt(0).toUpperCase()}
+          </div>
+
+          <div className="user-details">
+            <strong>{session.fullName}</strong>
+            <span>{session.email}</span>
+          </div>
+        </div>
+
+        <button
+          className="logout-button"
+          onClick={handleLogout}
+          disabled={loading}
+        >
+          Sair da conta
+        </button>
+
         <div className="sidebar-bottom">
           <span className="status-dot" />
           Gemini AI integrado
@@ -245,8 +350,11 @@ function App() {
         <header className="header">
           <div>
             <h1>Assistente de Idiomas</h1>
-            <p>Seu assistente virtual para aprender idiomas</p>
+            <p>
+              Olá, {session.fullName}! Vamos continuar aprendendo?
+            </p>
           </div>
+
           <span className="ai-tag">EduAgent AI</span>
         </header>
 
@@ -258,10 +366,13 @@ function App() {
           ) : messages.length === 0 ? (
             <div className="welcome">
               <div className="welcome-icon">✦</div>
+
               <h2>Olá! Como posso ajudar?</h2>
+
               <p>
                 Tire dúvidas sobre idiomas, peça dicas de estudos
-                e converse com nosso assistente de inteligência artificial.
+                e converse com nosso assistente de inteligência
+                artificial.
               </p>
             </div>
           ) : (
@@ -274,8 +385,11 @@ function App() {
                   }`}
                 >
                   <div className="message-label">
-                    {item.role === 'student' ? 'Você' : 'EduAgent AI'}
+                    {item.role === 'student'
+                      ? 'Você'
+                      : 'EduAgent AI'}
                   </div>
+
                   <div className="message-content">
                     {item.content}
                   </div>
@@ -311,7 +425,11 @@ function App() {
 
             <button
               type="submit"
-              disabled={loading || historyLoading || !message.trim()}
+              disabled={
+                loading ||
+                historyLoading ||
+                !message.trim()
+              }
             >
               {loading ? 'Enviando...' : 'Enviar ➤'}
             </button>

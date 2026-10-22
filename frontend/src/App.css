@@ -67,22 +67,6 @@
   background: #314664;
 }
 
-.sidebar-bottom {
-  margin-top: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #b4c2d7;
-  font-size: 12px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #34d399;
-}
-
 .main {
   flex: 1;
   min-width: 0;
@@ -246,7 +230,23 @@
   color: #b42318;
 }
 
-/* Histórico de conversas */
+.sidebar-bottom {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #b4c2d7;
+  font-size: 12px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #34d399;
+}
+
+/* Histórico */
 
 .conversation-section {
   flex: 1;
@@ -296,47 +296,8 @@
   font-weight: 600;
 }
 
-.conversation-item:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .empty-history {
   color: #8596b0;
   font-size: 12px;
   padding: 0 8px;
-}
-
-@media (max-width: 700px) {
-  .sidebar {
-    width: 75px;
-    padding: 18px 10px;
-  }
-
-  .brand > div:last-child,
-  .sidebar-bottom,
-  .conversation-section {
-    display: none;
-  }
-
-  .new-chat {
-    font-size: 12px;
-    padding: 10px 4px;
-  }
-
-  .header {
-    padding: 18px;
-  }
-
-  .chat-area {
-    padding: 16px;
-  }
-
-  .composer {
-    padding: 15px;
-  }
-
-  .composer button {
-    padding: 0 14px;
-  }
 }
